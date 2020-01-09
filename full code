@@ -1,0 +1,431 @@
+#include <NewPing.h>
+#define max_dis 20
+NewPing sonar_l(A0,A1,max_dis);
+NewPing sonar_m(A2,A3,100);
+NewPing sonar_r(A5,A4,max_dis);
+float dis_left;
+float dis_middle;
+float dis_right,leftSensor,rightSensor,frontSensor,oldFrontSensor,oldLeftSensor,oldRightSensor;
+
+int a;
+#define encl 2
+#define encr 3
+float leftrot=0;
+float rightrot=0;
+#define mr1 4
+#define mr2 5
+#define ml1 6
+#define ml2 7
+#define enr 10
+#define enl 11
+#define irl 13
+#define irr 12
+int wall_threshold = 80 ;
+int front_threshold = 60 ;
+float oldErrorP;
+float totalError ;
+int BaseSpeed = 100 ;
+int BaseSpeedl = 100 ;
+int BaseSpeedr = 110 ;
+boolean frontwall ;
+boolean leftwall ;
+boolean rightwall ;
+boolean first_turn ;
+boolean rightWallFollow ;
+boolean leftWallFollow ;
+int rightMiddleValue=34;
+int leftMiddleValue=34;
+float errorP,errorI,errorD;
+
+void setup()
+{
+Serial.begin(9600);
+ pinMode(encl,INPUT);
+ pinMode(encr,INPUT);
+ attachInterrupt(digitalPinToInterrupt(encl),leftpulse,CHANGE);
+ attachInterrupt(digitalPinToInterrupt(encr),rightpulse, CHANGE);
+ pinMode(ml1,OUTPUT);
+
+ pinMode(ml2,OUTPUT);
+  pinMode(mr2,OUTPUT);
+  pinMode(mr1,OUTPUT);
+  pinMode(enl,OUTPUT);
+  pinMode(enr,OUTPUT);
+  pinMode(12,INPUT);
+   pinMode(13,INPUT);
+    analogWrite(enr,255);
+ analogWrite(enl,255 );
+ forward();
+}
+
+void loop() 
+{
+  //Serial.println("entered");
+ ultrasonic();
+ // walls();
+ //move_cell();
+Serial.println(frontSensor);
+delay(500);
+
+ 
+
+ 
+//leftfollow();
+// rightfollow();
+// analogWrite(enr,110);
+// analogWrite(enl,100 );
+// forward();
+
+}
+
+void leftfollow()
+{
+ ultrasonic();
+ errorP=38-leftSensor;
+ errorD = (errorP - oldErrorP);
+ oldErrorP=errorP;
+
+ totalError=abs(errorP/14)*errorP+0.4*errorD;
+ analogWrite(enr,BaseSpeed - totalError);
+ analogWrite(enl,BaseSpeed + totalError);
+Serial.println("motor speeds: ");
+ Serial.println(BaseSpeed - totalError);
+ Serial.println(BaseSpeed +totalError);
+ if (totalError>110)
+ {
+  Serial.println("hdjcgcfdcgbvhjhndfhhjcirchychrk;cjwkjchcnlwejlkcfgigduo");
+ analogWrite(enr,0);
+ if(totalError>145)
+ {
+  analogWrite(enl,255);
+ }
+}
+ 
+ forward();
+ delay(5);
+}
+void rightfollow()
+{BaseSpeedr=110;
+ BaseSpeedl=100;
+ ultrasonic();
+ errorP=40-rightSensor;
+ errorD = errorP - oldErrorP;
+ oldErrorP=errorP;
+ 
+ totalError=abs(errorP/14)*errorP+0.4*errorD;
+ analogWrite(enr,BaseSpeedr + totalError);
+ analogWrite(enl,BaseSpeedl - totalError);
+ Serial.println("motor speeds: ");
+ Serial.println(BaseSpeedr + totalError);
+ Serial.println(BaseSpeedl -totalError);
+ if (totalError>100)
+ {
+  
+ analogWrite(enl,0);
+ if(totalError>145)
+ {
+  analogWrite(enr,255);
+ }
+ 
+ }
+ forward();
+ delay(5);
+}
+
+void move_cell()
+{
+  leftrot=0;
+  rightrot=0;
+  ultrasonic();
+  while(leftrot<70 && rightrot<70)
+  {//forward();
+  if(digitalRead(irl)==LOW)
+  {
+    right();
+  }
+  else if(digitalRead(irr)==LOW)
+  {
+    left();
+  }
+  else
+  {
+   if(leftwall and rightwall)
+   {
+    if(leftSensor<30)
+    {
+      leftfollow();
+    }
+    else
+    {
+      rightfollow();
+    }
+   }
+   else if(leftwall)
+    {
+      leftfollow();
+    }
+   else if(rightwall)
+    {
+      rightfollow();
+    }
+   else
+    { //stopm();
+      analogWrite(enr,108);
+      analogWrite(enl,100);
+      forward();
+      //delay(1000);
+     }
+   }
+  }
+}
+
+
+void forward()
+{
+  digitalWrite(ml2,HIGH);
+  digitalWrite(ml1,LOW);
+  digitalWrite(mr2,HIGH);
+  digitalWrite(mr1,LOW);
+}
+void backward()
+{
+  digitalWrite(ml1,HIGH);
+  digitalWrite(ml2,LOW);
+  digitalWrite(mr1,HIGH);
+  digitalWrite(mr2,LOW);
+}
+void stopm()
+{
+  digitalWrite(ml1,LOW);
+  digitalWrite(ml2,LOW);
+  digitalWrite(mr1,LOW);
+  digitalWrite(mr2,LOW);
+}
+void right()
+{
+  digitalWrite(ml2,HIGH);
+  digitalWrite(ml1,LOW);
+  digitalWrite(mr2,LOW);
+  digitalWrite(mr1,HIGH);
+}
+void left()
+{Serial.print("Distances in MM: ");
+//  Serial.println(leftSensor   );
+//  Serial.println(frontSensor   );
+//  Serial.println(rightSensor   );
+//  Serial.println(leftwall   );
+//  Serial.println(frontwall   );
+//  Serial.println(rightwall   );
+  digitalWrite(ml2,LOW);
+  digitalWrite(ml1,HIGH);
+  digitalWrite(mr2,HIGH);Serial.print("Distances in MM: ");
+//  Serial.println(leftSensor   );
+//  Serial.println(frontSensor   );
+//  Serial.println(rightSensor   );
+//  Serial.println(leftwall   );
+//  Serial.println(frontwall   );
+//  Serial.println(rightwall   );
+  digitalWrite(mr1,LOW);
+}
+void left_turn()
+{ analogWrite(enr,110);
+analogWrite(enl,110);
+  leftrot=0;
+  rightrot=0;
+  while(leftrot<22 and rightrot<22)
+  { 
+    Serial.println(leftrot);
+    left();
+  }
+  right();
+  stopm();
+}
+void right_turn()
+{
+   analogWrite(enr,110);
+  analogWrite(enl,110);
+  leftrot=0;
+  rightrot=0;
+  while( rightrot<24 && leftrot<24)
+  {
+    Serial.println(leftrot);
+    right();
+  }
+  left();
+  stopm();
+}
+void u_turn()
+{
+  ultrasonic();
+  Serial.println("uturn");
+  if(leftwall)
+  {
+    if(leftSensor<30)
+    {
+      analogWrite(enr,108);
+      analogWrite(enl,100);
+      leftrot=0;
+      rightrot=0;
+  while(leftrot<60 && rightrot<60)   
+  { 
+    Serial.println("");
+    right();
+  }
+    }
+
+else
+{
+   
+
+ analogWrite(enr,108);
+analogWrite(enl,100);
+leftrot=0;
+  rightrot=0;
+  while(leftrot<60 and rightrot<60 )   
+  { 
+    Serial.println(leftrot);
+    left();
+  }
+  }
+  }
+else  if(rightwall)
+   if(rightSensor<30)
+    {
+      analogWrite(enr,108);
+      analogWrite(enl,100);
+      leftrot=0;
+      rightrot=0;
+  while(leftrot<60 and rightrot<60)   
+  { 
+    Serial.println("");
+    left();
+  }
+    }
+
+else
+{
+   
+
+ analogWrite(enr,108);
+analogWrite(enl,100);
+leftrot=0;
+  rightrot=0;
+  while(leftrot<60 and rightrot<60 )   
+  { 
+    Serial.println(leftrot);
+    right();
+  }
+  }
+  else
+  {
+    analogWrite(enr,108);
+analogWrite(enl,100);
+leftrot=0;
+  rightrot=0;
+  while(leftrot<60 and rightrot<60 )   
+  { 
+    Serial.println(leftrot);
+    left();
+  }
+  }
+}
+void encoder()
+{//Serial.println(leftrot);
+ //Serial.println(rightrot);
+ //delay(100);
+}
+
+void leftpulse()
+{
+  leftrot+=1;
+}
+void rightpulse()
+{
+ rightrot+=1;
+}
+
+void ultrasonic()
+{
+  int duration1 = sonar_l.ping();
+ 
+  leftSensor = (duration1 / 2) * 0.343;
+  int duration2 = sonar_m.ping();
+  frontSensor = (duration2 / 2) * 0.343;
+  int duration3 = sonar_r.ping();
+  rightSensor = (duration3 / 2) * 0.343;
+
+  oldLeftSensor = leftSensor; // save old readings for movment
+  oldRightSensor = rightSensor;
+  oldFrontSensor = frontSensor;
+  if (leftSensor < wall_threshold && leftSensor>0) {
+    leftwall = true ;
+  }
+  else{
+    leftwall = false ;
+  }
+
+
+  if( rightSensor < wall_threshold && rightSensor>0) {
+    rightwall = true ;
+  }
+  else {
+    rightwall = false ;
+
+
+  } if (( frontSensor < front_threshold) && (frontSensor>0 )) {
+    frontwall = true ;
+  }
+  else {
+    frontwall = false ;
+  }
+//  Serial.print("Distances in MM: ");
+//  Serial.println(leftSensor   );
+//  Serial.println(frontSensor   );
+//  Serial.println(rightSensor   );
+//  Serial.println(leftwall   );
+//  Serial.println(frontwall   );
+//  Serial.println(rightwall   );
+}
+//void read_walls()                                                         // reading values from sensors and assigning it to cwall
+//{ cwall.front = 0;
+//  cwall.right = 0;
+//  cwall.left = 0;
+//  if (dis_left>50)
+//    {
+//      cwall.left = 1;
+//    }
+//    if (dis_middle>50)
+//    {
+//      cwall.front = 1;
+//    }
+//    if (dis_right>50)
+//    {
+//      cwall.right = 1;
+//    }
+//}
+void walls() {
+
+
+  if (leftSensor < wall_threshold && leftSensor>0) {
+    leftwall = true ;
+  }
+  else{
+    leftwall = false ;
+  }
+
+
+  if( rightSensor < wall_threshold && rightSensor>0) {
+    rightwall = true ;
+  }
+  else {
+    rightwall = false ;
+
+
+  } if (( frontSensor < front_threshold) && (frontSensor>0 )) {
+    frontwall = true ;
+  }
+  else {
+    frontwall = false ;
+  }
+
+}
